@@ -43,7 +43,7 @@ public class Main {
                 );
             }
 
-            String json = response.body();
+            String json = "[{\"name\":\"Prueba\",\"gender\":\"female\"}]";
 
             List<User> users =
                     new JsonUserDeserializer().deserialize(json);
