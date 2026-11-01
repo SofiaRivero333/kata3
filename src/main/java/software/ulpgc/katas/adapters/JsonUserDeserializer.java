@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.google.gson.Strictness;
 import software.ulpgc.katas.adapters.dtos.UserDto;
@@ -12,12 +11,10 @@ import software.ulpgc.katas.model.Gender;
 import software.ulpgc.katas.model.User;
 import software.ulpgc.katas.ports.UserDeserializer;
 
-import java.time.Instant;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class JsonRandomUserDeserializer implements UserDeserializer {
+public class JsonUserDeserializer implements UserDeserializer {
     private final Gson gson = new GsonBuilder()
             .setStrictness(Strictness.STRICT)
             .create();
@@ -29,16 +26,16 @@ public class JsonRandomUserDeserializer implements UserDeserializer {
         }
 
         try {
-            JsonObject object = gson.fromJson(json, JsonObject.class);
+            JsonElement root = gson.fromJson(json, JsonElement.class);
 
-            if (object == null || !object.has("results")
-                    || !object.get("results").isJsonArray()) {
+            if (root == null || !root.isJsonArray()) {
                 throw new IllegalArgumentException(
-                        "La entrada debe contener un array results."
+                        "La entrada debe ser una lista JSON: [...]."
                 );
             }
 
-            return deserialize(object.getAsJsonArray("results"));
+            return deserialize(root.getAsJsonArray());
+
         } catch (JsonParseException e) {
             throw new IllegalArgumentException(
                     "JSON invalido: comprueba su formato.", e
@@ -52,6 +49,7 @@ public class JsonRandomUserDeserializer implements UserDeserializer {
         for (int i = 0; i < array.size(); i++) {
             try {
                 users.add(deserialize(array.get(i)));
+
             } catch (JsonParseException | IllegalArgumentException e) {
                 throw new IllegalArgumentException(
                         "Registro " + (i + 1) + " invalido: "
@@ -71,19 +69,10 @@ public class JsonRandomUserDeserializer implements UserDeserializer {
     private User deserialize(UserDto user) {
         validate(user);
 
-        String title = user.name.title == null
-                ? ""
-                : user.name.title.trim();
-
         return new User(
-                String.join(
-                        " ",
-                        title,
-                        user.name.first.trim(),
-                        user.name.last.trim()
-                ).trim(),
-                genderOf(user.gender),
-                dateOfBirthOf(user.dob.date)
+                user.name.trim(),
+                genderOf(user.gender.trim()),
+                user.age
         );
     }
 
@@ -94,46 +83,38 @@ public class JsonRandomUserDeserializer implements UserDeserializer {
             );
         }
 
-        if (user.name == null || isEmpty(user.name.first)
-                || isEmpty(user.name.last)) {
+        if (user.name == null || user.name.isBlank()) {
             throw new IllegalArgumentException(
-                    "faltan el nombre o los apellidos."
+                    "falta el nombre."
             );
         }
 
-        if (isEmpty(user.gender)) {
+        if (user.gender == null || user.gender.isBlank()) {
             throw new IllegalArgumentException(
                     "falta el genero."
             );
         }
 
-        if (user.dob == null || isEmpty(user.dob.date)) {
+        if (user.age == null) {
             throw new IllegalArgumentException(
-                    "falta la fecha de nacimiento."
+                    "falta la edad."
             );
         }
-    }
 
-    private static boolean isEmpty(String value) {
-        return value == null || value.isBlank();
+        if (user.age < 0) {
+            throw new IllegalArgumentException(
+                    "la edad no puede ser negativa."
+            );
+        }
     }
 
     private static Gender genderOf(String value) {
         try {
             return Gender.valueOf(value);
+
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException(
                     "genero no valido: " + value, e
-            );
-        }
-    }
-
-    private static Instant dateOfBirthOf(String value) {
-        try {
-            return Instant.parse(value);
-        } catch (DateTimeParseException e) {
-            throw new IllegalArgumentException(
-                    "fecha no valida: " + value, e
             );
         }
     }
