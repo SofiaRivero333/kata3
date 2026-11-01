@@ -1,4 +1,5 @@
 package software.ulpgc.katas.model;
 
-public class Gender {
+public enum Gender {
+    male, female
 }

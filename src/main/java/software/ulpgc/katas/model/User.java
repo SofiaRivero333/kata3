@@ -1,4 +1,4 @@
 package software.ulpgc.katas.model;
 
-public class User {
+public record User(String name, Gender gender, int age) {
 }
